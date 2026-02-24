@@ -12,8 +12,8 @@ const { render } = require('ejs');
 const multerconfig=require('./config/multerconfig');
 const path=require('path');
 
-
-
+// Trust proxy for production deployment
+app.set('trust proxy', 1);
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine',"ejs");
@@ -66,7 +66,12 @@ app.post('/register', async (req, res) => {
             password:hash
         });
         let token = jwt.sign({email:email,userid:user._id},process.env.JWT_SECRET);
-        res.cookie('token',token);
+        res.cookie('token',token, { 
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+          maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
         res.redirect('/profile');
 
 
@@ -115,7 +120,12 @@ app.post('/login', async (req,res)=>{
   bcrypt.compare(password,user.password,(err,result)=>{
     if(result){
       let token = jwt.sign({email:email,userid:user._id},process.env.JWT_SECRET);
-      res.cookie('token',token, { httpOnly: true });
+      res.cookie('token',token, { 
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      });
       res.redirect('/profile');
 
     }else{
@@ -128,7 +138,12 @@ app.post('/login', async (req,res)=>{
 })
 
 app.get('/logout',(req,res)=>{
-  res.cookie('token',"", { httpOnly: true, maxAge: 0 });
+  res.cookie('token',"", { 
+    httpOnly: true, 
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 0 
+  });
   
    res.redirect("/")
 })
